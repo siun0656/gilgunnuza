@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>길건너 역사 퀴즈</title>
+<style>
+:root{--bg:#f3efe2;--fg:#222;--card:#fff;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1d1f24;--fg:#eee;--card:#2b2e36}}
+:root[data-theme="dark"]{--bg:#1d1f24;--fg:#eee;--card:#2b2e36}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Malgun Gothic",sans-serif;display:flex;flex-direction:column;align-items:center;touch-action:none;user-select:none}
+#hud{width:min(100vw,360px);font-size:12px;padding:4px 6px;box-sizing:border-box;text-align:center;line-height:1.5}
+#tbw{width:min(100vw,360px);height:10px;background:#8884}
+#tb{height:100%;width:0;background:#e94}
+canvas{width:min(100vw,360px);height:auto;display:block;touch-action:none}
+#msg{height:18px;font-size:13px;font-weight:700}
+#bt{display:flex;gap:6px}
+#bt button,.o{padding:9px 12px;border-radius:10px;border:1px solid #8886;background:var(--card);color:var(--fg);font-size:14px}
+.o{display:block;width:100%;margin:6px 0;font-size:15px;text-align:left}
+.o:disabled{opacity:.5}
+#m{position:fixed;inset:0;background:#0008;display:none;align-items:center;justify-content:center;z-index:5}
+#mc{width:min(92vw,340px);max-height:85vh;overflow:auto;touch-action:pan-y;background:var(--card);padding:16px;border-radius:14px;box-sizing:border-box}
+#mc h3{margin:0 0 8px}.q{font-size:16px;font-weight:700}
+.gr{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:8px 0}
+.i{font-size:24px;padding:4px;border-radius:8px;border:2px solid #8884;background:none;color:var(--fg)}.i small{display:block;font-size:9px}.i.on{border-color:#e94;background:#fd93}
+#fl{position:fixed;inset:0;background:red;opacity:0;pointer-events:none;z-index:9}
+#fl.on{animation:f .5s 2}@keyframes f{0%,100%{opacity:0}30%{opacity:.45}}
+</style></head><body>
+<div id="hud"></div><div id="tbw"><div id="tb"></div></div>
+<canvas id="cv" width="360" height="520"></canvas>
+<div id="msg"></div>
+<div id="bt"><button onclick="shop()">🛍️ 상점</button><button onclick="cyc()">🔄 캐릭터</button><button onclick="notes()">📒 오답노트</button><button onclick="mus()">🎵</button><button id="sb" onclick="tg()">🔊</button></div>
+<div id="m"><div id="mc"></div></div><div id="fl"></div>
+<script>
+const T=40,W=9,H=520,$=i=>document.getElementById(i),cx=$('cv').getContext('2d');
+cx.textAlign='center';cx.textBaseline='middle';
+const raw=`구석기 시대 사람들이 주로 쓴 도구는?|뗀석기|간석기|청동검|철제 농기구|돌을 깨뜨리거나 떼어 만든 뗀석기를 썼어요.
+구석기 시대의 만능 도구는?|주먹도끼|반달 돌칼|가락바퀴|비파형 동검|자르기·두들기기·땅파기에 쓴 뗀석기예요.
+구석기 시대 사람들의 옷은?|짐승 가죽이나 풀로 만든 옷|비단옷|삼베옷|뼈바늘로 지은 옷|사냥한 짐승의 가죽이나 풀을 엮어 입었어요.
+구석기 시대의 식생활은?|열매·풀뿌리 채집과 사냥|벼농사로 쌀밥 짓기|청동 그릇에 담아 먹기|조·기장 밭농사|채집하고 동물을 사냥했어요.
+구석기 시대 사람들의 집은?|막집이나 동굴|움집|기와집|초가집|먹을 것을 찾아 옮겨 다니며 막집·동굴에서 살았어요.
+구석기 시대에 불을 쓴 까닭은?|추위와 짐승을 막고 음식을 익히려고|청동기를 만들려고|벼농사를 지으려고|고인돌을 세우려고|불로 몸을 보호하고 음식을 익혀 먹었어요.
+신석기 시대 사람들이 주로 쓴 도구는?|간석기|뗀석기|청동 거울|철제 무기|돌을 갈고 다듬은 간석기를 썼어요.
+신석기 시대에 실을 뽑는 도구는?|가락바퀴|갈돌|반달 돌칼|주먹도끼|가락바퀴로 실을 뽑아 뼈바늘로 옷을 만들었어요.
+빗살무늬 토기의 쓰임은?|음식 보관과 조리|무덤 만들기|물고기 낚시|땅 파기|진흙을 빚어 구운 토기에 음식을 보관·조리했어요.
+열매 껍질을 벗기거나 곡식을 가는 도구는?|갈판과 갈돌|뼈작살|돌그물추|주먹도끼|갈판과 갈돌로 곡식을 갈아 먹었어요.
+신석기 시대에 물고기를 잡은 도구는?|뼈작살·뼈낚시·돌그물추|반달 돌칼|비파형 동검|철제 갑옷|뼈작살, 뼈낚시, 돌그물추로 물고기를 잡았어요.
+신석기 시대 사람들의 생활 모습은?|강가·바닷가에 움집을 짓고 마을을 이뤄 정착|동굴을 옮겨 다니며 생활|기와집에 모여 생활|고인돌 옆 초가집에서 생활|움집을 짓고 마을을 이루며 농사도 시작했어요.
+청동기를 주로 쓴 사람은?|지배자와 제사장|모든 평민|노비|어부|청동은 구하기 힘들어 지위 높은 사람만 썼어요.
+청동기 시대의 토기는?|민무늬 토기|빗살무늬 토기|가야 토기|청자|무늬를 그리지 않은 민무늬 토기를 썼어요.
+청동기 시대 벼농사 수확 도구는?|반달 돌칼|주먹도끼|뼈바늘|비파형 동검|벼농사가 시작되고 반달 돌칼로 곡식을 거뒀어요.
+청동기 시대에 지배자가 등장한 까닭은?|농사 발달로 재산 차이가 생겨서|모두 똑같이 살아서|불을 처음 써서|철기가 발명되어서|곡식이 늘면서 빈부 차이가 생기고 지배자가 나타났어요.
+청동기 시대를 대표하는 무덤은?|고인돌|움집|막집|기와집|지배자가 있었음을 짐작할 수 있어요.
+바둑판 모양으로 생긴 고인돌은?|바둑판식|탁자식|개석식|움집식|탁자 모양은 탁자식, 덮개돌을 바로 얹은 것은 개석식이에요.
+우리 역사 속 최초의 국가는?|고조선|고구려|백제|신라|청동기 문화를 바탕으로 세워진 나라예요.
+고조선을 세운 인물은?|단군왕검|주몽|온조|박혁거세|웅녀와 환웅 사이에서 태어난 단군왕검이 세웠어요.
+고조선 건국 이야기가 실린 책은?|삼국유사|삼국사기|한서|삼국지|고려 시대 승려 일연이 쓴 책이에요.
+“사람을 죽이면 사형에 처한다”로 알 수 있는 것은?|생명을 중시했다|화폐가 없었다|철기를 썼다|불교를 믿었다|살인 같은 큰 죄를 법으로 엄하게 다스렸어요.
+“도둑질하면 노비로 삼거나 50만 전을 낸다”로 알 수 있는 것은?|노비가 있는 신분제 사회, 화폐 사용|모두가 평등한 사회|화폐가 없는 사회|유목 중심 사회|노비와 화폐가 있었음을 알 수 있어요.
+고조선의 대표적인 문화유산은?|비파형 동검과 탁자식 고인돌|주먹도끼와 빗살무늬 토기|칠지도와 금동관|광개토대왕릉비|이 유물의 분포로 고조선 문화 범위를 짐작해요.
+삼국과 가야는 무엇을 바탕으로 세워졌나?|철기 문화|구석기 문화|신석기 문화|청동기 문화|고조선이 멸망할 무렵 철기 문화를 바탕으로 세워졌어요.
+고구려가 졸본에서 수도를 옮긴 곳은?|국내성|한성|금성|사비|국내성으로 옮기고 주변 지역을 정복했어요.
+북쪽으로 영토를 넓히고 한강 북쪽을 차지한 왕은?|광개토대왕|장수왕|근초고왕|진흥왕|활발한 정복 활동을 펼친 광개토대왕이에요.
+수도를 평양으로 옮기고 한강 유역을 모두 차지한 왕은?|장수왕|광개토대왕|근초고왕|진흥왕|장수왕은 평양으로 수도를 옮겼어요.
+장수왕이 아버지의 업적을 기리려 세운 비석은?|광개토대왕릉비|진흥왕 순수비|칠지도|덩이쇠|광개토대왕릉비예요.
+넓은 한강 평야를 차지해 농사와 교류에 유리했던 나라는?|백제|고구려|신라|가야|백제는 지리적 이점으로 빠르게 성장했어요.
+남쪽으로 진출하고 중국·왜와 교류한 백제의 왕은?|근초고왕|장수왕|진흥왕|광개토대왕|근초고왕은 영토를 넓히고 활발히 교류했어요.
+백제가 왜에 보낸 칼은?|칠지도|주먹도끼|비파형 동검|철제 판갑옷|칠지도는 백제가 왜에 보낸 칼이에요.
+진흥왕이 화랑도를 통해 기른 것은?|유능한 인재|철제 무기|벼농사 기술|고인돌|신라는 화랑도로 인재를 길렀어요.
+진흥왕이 한강 유역을 차지한 것을 기념해 세운 비석은?|북한산 신라 진흥왕 순수비|광개토대왕릉비|칠지도|정림사지 석탑|진흥왕 순수비는 한강 유역 차지를 기념해요.
+신라가 한강 유역을 차지해 얻은 이점은?|중국과 직접 교류할 수 있게 됨|수도를 평양으로 옮김|왜에 칠지도를 보냄|청동기 문화가 시작됨|한강을 차지해 중국과 직접 교류했어요.
+삼국이 세워질 무렵 낙동강 유역에 이룬 연맹은?|가야 연맹|한강 연맹|고조선 연맹|발해 연맹|금관가야에서 대가야로 중심이 바뀌었어요.
+가야는 어떻게 됐나?|백제·신라의 압력을 받다 신라에 통합됐다|한강 유역을 차지했다|고구려를 무너뜨렸다|평양으로 수도를 옮겼다|크게 성장하지 못하고 신라에 통합됐어요.
+한강 유역을 차지한 나라의 순서는?|4세기 백제→5세기 고구려→6세기 신라|4세기 고구려→5세기 백제→6세기 신라|4세기 신라→5세기 백제→6세기 고구려|4세기 백제→5세기 신라→6세기 고구려|백제 → 고구려 → 신라 순서로 전성기를 누렸어요.
+삼국 시대의 신분은?|귀족·평민·천민|왕·장군·군사|양반·중인·상민|사·농·공·상|신분에 따라 생활 모습이 달랐어요.
+많은 토지와 노비를 갖고 높은 관리가 된 신분은?|귀족|평민|천민|노비|귀족은 국가의 중요한 일을 결정했어요.
+대부분 농사를 짓고 세금을 내며 성을 쌓는 데 동원된 신분은?|평민|귀족|왕족|승려|평민은 세금을 내고 궁궐·성 만드는 데 동원됐어요.
+천민의 대다수는?|노비|귀족|관리|장군|귀족의 땅에서 농사짓거나 주인집 일을 했어요.
+삼국 시대 평민이 주로 입은 옷감은?|삼베|비단|금과 은|가죽|귀족은 화려한 비단, 평민은 삼베옷을 입었어요.
+쌀을 귀한 곡식이라 주로 먹은 사람은?|왕과 귀족 등 지배층|평민|천민|노비|평민은 보리·조 등 잡곡을 먹었어요.
+기와집에서 살았던 사람은?|왕족과 귀족 등 지배층|평민|천민|어부|평민은 주로 초가집에서 살았어요.
+삼국이 불교를 받아들인 까닭은?|백성의 마음을 모으고 왕권을 강화하려고|청동기를 만들려고|한강을 차지하려고|고인돌을 세우려고|그래서 절, 탑, 불상이 많이 만들어졌어요.
+금동 연가 7년명 여래 입상을 만든 나라는?|고구려|백제|신라|가야|고구려의 불상이에요.
+부여 정림사지 오층 석탑을 만든 나라는?|백제|고구려|신라|가야|백제의 석탑이에요.
+철제 무기와 갑옷을 만들고 철을 수출한 나라는?|가야|신라|고구려|고조선|철이 많이 나서 철 다루는 기술이 뛰어났어요.
+가야 고분에서 나온 다양한 토기로 알 수 있는 것은?|당시 사람들의 생활 모습|귀족만 살았다는 것|구석기 사람의 도구|8조법의 내용|토기를 통해 생활 모습을 짐작할 수 있어요.`.split('\n');
+const QS=raw.map((l,i)=>{const a=l.split('|'),o=[1,2,3,4].map((k,j)=>({t:a[k],c:!j}));
+ for(let j=3;j>0;j--){const k=Math.random()*(j+1)|0;[o[j],o[k]]=[o[k],o[j]]}
+ return{id:i+1,question:a[0],options:o.map(x=>x.t),answer:o.findIndex(x=>x.c),explanation:a[5]}});
+const ITEM={},ALL=[];
+'강아지:🐶,고양이:🐱,햄스터:🐹,토끼:🐰,판다:🐼,레서판다:🦝,쿼카:🐭,사막여우:🦊,북극여우:🐺,수달:🦦,해달:🐻,하프물범:🦭,알파카:🦙,카피바라:🐗,펭귄:🐧,코알라:🐨,다람쥐:🐿️,고슴도치:🦔,족제비:🐈,하늘다람쥐:🐁,아기 악어:🐊,아기 거북이:🐢,아기 펭귄:🐥,오리:🦆,기린:🦒,아기 사슴:🦌,바다표범:🦭,친칠라:🐀,페럿:🦡'.split(',').forEach(s=>{const[n,e]=s.split(':');ALL.push(ITEM[n]={n,e,k:'c'})});
+'h:동물 귀 비니:🧢,h:토끼 귀 털모자:🎧,h:곰돌이 캡:🧸,h:펭귄 모자:🎩,h:쿼카 비니:👒,h:딸기 베레모:🍓,h:버섯 모자:🍄,h:빵 베레모:🥐,h:방울 털모자:🎅,h:리본 군밤 모자:🎀,h:뽀글이 베레모:☁️,h:병아리 캡:🐤,h:파티 꼬깔모자:🎉,h:마법사 꼬깔:🧙,p:계란후라이 핀:🍳,p:새싹 핀:🌱,g:둥근 뿔테 안경:👓,g:오버사이즈 동글이 안경:🥽,g:뱅뱅이 안경:🌀,g:하트 선글라스:💗,g:별 모양 선글라스:⭐,g:고양이 눈 안경:😼,g:콧수염 장난감 안경:🥸,g:머리 위 선글라스:🕶️,g:안경 줄 동글이 안경:🔗,g:눈사람 안경:⛄,g:알 없는 미니 뿔테:🤓'.split(',').forEach(s=>{const[k,n,e]=s.split(':');ALL.push(ITEM[n]={n,e,k})});
+let S={bst:[0,0],bgm:3,coins:0,owned:['강아지'],eq:{c:'강아지'},notes:[]};
+try{Object.assign(S,JSON.parse(localStorage.getItem('hq')||'{}'))}catch(e){}
+const save=()=>{try{localStorage.setItem('hq',JSON.stringify(S))}catch(e){}};
+let q=1,score=0,ft=true,mode='start',tLeft=0,p={r:0,c:4},maxR=0,cam=0,lanes=[],flash=0,paused=false,inv=0,set=0,hp=3,pass=0,ord=[...Array(25).keys()];
+const R=(a,b)=>a+Math.random()*(b-a),G0={t:'g',objs:[]},COL=['#e55','#59e','#fb3','#a6d','#3b9'];
+const tier=()=>Math.min(2,((q-1)/9|0)+pass),era=()=>set,ERA=['선사·고조선','삼국·가야'],
+TH=[{g:'#cbb98a',r:'#8b6f47',w:'#4f8f7a',dc:['🪨','🌿','🦴','🔥']},{g:'#6cc36c',r:'#555',w:'#3a9bb5',dc:['🌸','🌳','🏯','🎋']}];
+const CF=[{s:[.8,1.5],g:[5,9],cs:[.5,.8],cg:[1,2]},{s:[1.5,2.6],g:[4,7],cs:[.8,1.2],cg:[1.5,2.5]},{s:[2.4,4],g:[3,5],cs:[1,1.6],cg:[2,3]}];
+const SM=[1,1.8,2.8],spd=L=>L.sp*SM[tier()]/SM[L.tg];
+function mk(r){const pv=lanes[r-1],c=CF[tier()];let t;
+ if(r<2)t='g';else if(pv.t=='g'||pv.t=='s')t=Math.random()<.55?'r':'w';
+ else if(pv.t=='r')t=Math.random()<.5?'r':Math.random()<.5?'w':'g';
+ else t=(pv.n>=3||Math.random()<.4)?'g':'w';
+ const L={t,objs:[],n:pv&&pv.t==t?pv.n+1:1,d:Math.random()<.5?1:-1,sp:0,span:0,tg:tier()};
+ if(t=='r'||t=='w'){L.sp=t=='r'?R(...c.s):R(...c.cs);if(t=='w'&&pv.t=='w'){L.d=-pv.d;if(Math.abs(L.sp-pv.sp)<.25*pv.sp)L.sp=pv.sp*1.4}let x=-4,s=0;
+  while(s<W+8){const w=t=='w'?[1.5,2,3,4][Math.random()*4|0]:(Math.random()<.3?2.4:1.3),g=t=='w'?R(...c.cg):R(...c.g);L.objs.push({x,w,col:COL[Math.random()*5|0]});x+=w+g;s+=w+g}L.span=s}
+ if(t!='w'&&r>2&&Math.random()<.5)L.coin={c:Math.random()*W|0,v:Math.random()<.25?20:10};
+ if(t=='g'&&Math.random()<.6){let dc=Math.random()*W|0;if(L.coin&&L.coin.c==dc)dc=(dc+1)%W;L.dc={c:dc,e:TH[set].dc[Math.random()*4|0]}}
+ lanes[r]=L}
+const lane=r=>{if(r<0)return G0;while(lanes.length<=r)mk(lanes.length);return lanes[r]};
+function die(){const wat=lane(p.r).t=='w';flash=.4;wat?SFX.splash():SFX.hit();hp--;if(hp<=0){hp=3;maxR=0;lanes=[];p={r:0,c:4};cam=0;inv=1.5;SFX.bad();msg('💔 하트를 모두 잃었어요! 처음부터 다시!');return}const c=Math.round(p.c);let r=Math.max(0,p.r-(3+(Math.random()<.5?1:0)));
+ while(r>0&&lane(r).t=='w'&&!lane(r).objs.some(o=>c+.5>o.x&&c+.5<o.x+o.w))r--;
+ p.r=r;p.c=c;inv=1.2;msg('💥 하트 -1! 뒤로 밀려나요')}
+function upd(dt){
+ for(let r=Math.max(0,p.r-4);r<p.r+14;r++){const L=lane(r);if(!L.sp)continue;
+  for(const o of L.objs){o.x+=L.d*spd(L)*dt;if(o.x>-4+L.span)o.x-=L.span;if(o.x+o.w<-4)o.x+=L.span}}
+ const L=lane(p.r);
+ if(L.coin&&Math.round(p.c)==L.coin.c){S.coins+=L.coin.v;msg('+'+L.coin.v+'G 코인!');SFX.coin();L.coin=null}
+ if(inv>0)inv-=dt;
+ if(L.t=='r'){if(inv>0)return;for(const o of L.objs)if(p.c+.8>o.x&&p.c+.2<o.x+o.w){die();return}}
+ else if(L.t=='w'){const m=p.c+.5,o=L.objs.find(o=>m>o.x&&m<o.x+o.w);if(!o||(p.c+=L.d*spd(L)*dt)<-.5||p.c>W-.5)die()}}
+function draw(){
+ const th=TH[set],gc=th.g;
+ for(let r=Math.floor(cam)-3;r<=Math.floor(cam)+11;r++){const L=lane(r),y=H-(r-cam+4)*T;
+  cx.fillStyle=L.t=='r'?th.r:L.t=='w'?th.w:L.t=='s'?'#f2c94c':gc;cx.fillRect(0,y,360,T+1);
+  if(L.t=='r'){cx.fillStyle=set?'#ddd8':'#5a4528aa';for(let i=0;i<9;i++)set?cx.fillRect(i*T+8,y+T/2-1,24,2):cx.fillRect(i*T+(i*13%22)+6,y+(i*17%28)+5,5,3)}
+  for(const o of L.objs){const ox=o.x*T,w=o.w*T;
+   if(L.t=='w'){if(o.w>=1.9){cx.fillStyle='#8a5a2b';cx.fillRect(ox,y+6,w,T-12);cx.fillStyle='#b98a50';cx.fillRect(ox+3,y+9,w-6,4);cx.fillStyle='#6b431c';cx.fillRect(ox+3,y+T-15,w-6,3);cx.fillStyle='#d9b27a';cx.fillRect(ox,y+6,5,T-12);cx.fillRect(ox+w-5,y+6,5,T-12)}else{cx.fillStyle='#3c9a4a';cx.beginPath();cx.ellipse(ox+w/2,y+T/2,w/2,T/2-4,0,0,7);cx.fill();cx.font='16px serif';cx.fillText('🪷',ox+w/2,y+T/2+1)}}
+   else{cx.fillStyle=o.col;cx.fillRect(ox,y+7,w,T-14);cx.fillStyle='#234';cx.fillRect(L.d>0?ox+w-.6*T:ox,y+9,.6*T,T-18)}}}
+ for(let r=Math.floor(cam)-3;r<=Math.floor(cam)+11;r++){const L=lane(r);if(L.dc){cx.globalAlpha=.85;cx.font='20px serif';cx.fillText(L.dc.e,L.dc.c*T+T/2,H-(r-cam+4)*T+T/2);cx.globalAlpha=1}if(L.coin){const X=L.coin.c*T+T/2,Y=H-(r-cam+4)*T+T/2;cx.fillStyle=L.coin.v>10?'#ff6fae':'#ffd400';cx.beginPath();cx.arc(X,Y,11,0,7);cx.fill();cx.fillStyle='#000a';cx.font='bold 11px sans-serif';cx.fillText(L.coin.v,X,Y+1)}}
+ cx.globalAlpha=inv>0&&(inv*10|0)%2?.4:1;
+ const px=p.c*T+T/2,py=H-(p.r-cam+4)*T+T/2,e=S.eq;
+ cx.font='30px serif';cx.fillText(ITEM[e.c].e,px,py);
+ if(e.g){cx.font='16px serif';cx.fillText(ITEM[e.g].e,px,py+1)}
+ if(e.h){cx.font='20px serif';cx.fillText(ITEM[e.h].e,px,py-15)}
+ if(e.p){cx.font='14px serif';cx.fillText(ITEM[e.p].e,px+11,py-12)}
+ cx.globalAlpha=1;if(flash>0){cx.fillStyle=`rgba(255,0,0,${flash})`;cx.fillRect(0,0,360,H)}}
+function hud(){$('hud').innerHTML=`[현재 도달 거리: <b>${maxR} m</b>] [최고 기록: <b>${S.bst[set]} m</b>] [보유 코인: <b>${S.coins} G</b>] [현재 문제: <b>${q} / 25</b>]<br>${'❤️'.repeat(hp)}${'🖤'.repeat(3-hp)} · ${ERA[era()]}${mode=='play'?' · 남은 시간 '+Math.max(0,tLeft).toFixed(1)+'초':''}`;
+ $('tb').style.width=(mode=='play'?tLeft/10*100:0)+'%'}
+let AC,mute=false,biv=0,bs=0;
+const au=()=>{try{if(!AC)AC=new(window.AudioContext||window.webkitAudioContext)();if(AC.state=='suspended')AC.resume()}catch(e){}return AC};
+function tone(f,d,ty='square',v=.06,t0=0,f2){const a=au();if(!a||mute)return;const o=a.createOscillator(),g=a.createGain(),t=a.currentTime+t0;o.type=ty;o.frequency.setValueAtTime(f,t);if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+d);g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.001,t+d);o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+d+.02)}
+function noise(d,v=.15,fr=800){const a=au();if(!a||mute)return;const n=a.sampleRate*d|0,b=a.createBuffer(1,n,a.sampleRate),c=b.getChannelData(0);for(let i=0;i<n;i++)c[i]=(Math.random()*2-1)*(1-i/n);const s=a.createBufferSource(),f=a.createBiquadFilter(),g=a.createGain();s.buffer=b;f.type='lowpass';f.frequency.value=fr;g.gain.value=v;s.connect(f);f.connect(g);g.connect(a.destination);s.start()}
+const SFX={hop:()=>tone(440,.07,'square',.04,700),coin:()=>{tone(988,.08,'square',.05);tone(1319,.16,'square',.05,.07)},hit:()=>{noise(.3,.25,700);tone(180,.3,'sawtooth',.08,0,60)},splash:()=>{noise(.45,.2,2500);tone(300,.2,'sine',.06,0,120)},ok:()=>[523,659,784,1047].forEach((f,i)=>tone(f,.16,'triangle',.08,i*.09)),bad:()=>{tone(220,.25,'sawtooth',.07,0,140);tone(160,.35,'sawtooth',.07,.2,90)},buy:()=>[784,988,1175,1568].forEach((f,i)=>tone(f,.12,'square',.05,i*.07))};
+const TR=[
+{n:'신나는 팝',ms:120,sc:[0,2,4,7,9],w:'triangle',v:.06,d:.14,bb:4,bs:[0,1,0,2],ml:[0,2,4,5,4,2,4,7,5,4,2,0,2,4,2,-1,0,2,4,5,7,5,4,7,9,7,5,4,2,4,0,-1]},
+{n:'경쾌한 행진',ms:150,sc:[0,2,4,5,7,9,11],w:'square',v:.03,d:.16,bb:4,bs:[0,3,4,0],ml:[0,2,4,2,5,4,2,0,1,3,5,3,6,5,3,1,0,2,4,7,5,4,2,4,3,1,2,0,-1,0,-1,-1]},
+{n:'모험의 탐험',ms:190,sc:[0,3,5,7,10],w:'triangle',v:.06,d:.2,bb:4,bs:[0,2,1,0],ml:[0,-1,2,3,-1,2,0,-1,4,3,2,-1,0,2,3,-1,5,4,3,2,3,-1,2,0,2,0,-1,0,-1,-1,-1,-1]},
+{n:'포근한 오후',ms:260,sc:[0,2,4,7,9],w:'sine',v:.09,d:.5,bb:8,bs:[0,1,2,0],ml:[0,-1,-1,2,-1,-1,4,-1,2,-1,-1,0,-1,-1,-1,-1,1,-1,-1,3,-1,-1,4,-1,3,-1,2,-1,0,-1,-1,-1]},
+{n:'잔잔한 밤',ms:360,sc:[0,2,4,7,9],w:'sine',v:.09,d:.9,bb:8,bs:[0,1,2,0],ml:[0,-1,-1,-1,2,-1,-1,-1,4,-1,-1,-1,2,-1,-1,-1,3,-1,-1,-1,1,-1,-1,-1,0,-1,-1,-1,-1,-1,-1,-1]}];
+const nf=(d,sc)=>{const n=sc.length;return 261.63*Math.pow(2,(sc[d%n]+12*Math.floor(d/n)+[0,2,4][era()])/12)};
+function bgm(){au();clearInterval(biv);bs=0;biv=setInterval(()=>{if(mute||!AC)return;const t=TR[S.bgm||0],d=t.ml[bs%32];if(d>=0)tone(nf(d,t.sc),t.d,t.w,t.v);if(bs%t.bb==0)tone(nf(t.bs[(bs/t.bb|0)%4],t.sc)/2,t.d*3,'sine',.07);bs++},TR[S.bgm||0].ms)}
+function mus(){S.bgm=((S.bgm||0)+1)%TR.length;save();bgm();msg('🎵 '+(S.bgm+1)+'/5 '+TR[S.bgm].n)}
+function tg(){mute=!mute;$('sb').textContent=mute?'🔇':'🔊'}
+let last=0;
+function loop(t){const dt=Math.min(.05,(t-last)/1000||0);last=t;
+ if(mode=='play'&&!paused){upd(dt);tLeft-=dt;if(p.r>maxR){const b=S.bst[set];maxR=p.r;if(maxR>b){S.coins+=maxR-b;S.bst[set]=maxR}}if(tLeft<=0)endPlay()}
+ flash=Math.max(0,flash-dt);cam+=(p.r-cam)*Math.min(1,dt*6);draw();hud();requestAnimationFrame(loop)}
+function startPlay(){mode='play';tLeft=10;lane(p.r);p.c=Math.round(p.c);inv=1.5}
+function endPlay(){mode='quiz';save();if(q>=25)result();else{q++;showQuiz()}}
+const modal=h=>{$('mc').innerHTML=h;$('m').style.display='flex'};
+function closeM(){$('m').style.display='none';paused=false}
+function msg(s){$('msg').textContent=s;clearTimeout(msg.t);msg.t=setTimeout(()=>$('msg').textContent='',2500)}
+function showQuiz(){mode='quiz';ft=true;const Q=QS[set*25+ord[q-1]];
+ modal(`<small>${ERA[era()]} · ${q} / 25</small><p class="q">${Q.question}</p>`+Q.options.map((o,i)=>`<button class="o" onclick="ans(${i})">${'①②③④'[i]} ${o}</button>`).join(''))}
+function ans(i){const Q=QS[set*25+ord[q-1]];
+ if(i==Q.answer){S.coins+=10;if(ft)score++;save();SFX.ok();closeM();startPlay();msg('정답! +10G · 10초 동안 건너요!')}
+ else{ft=false;if(!S.notes.includes(Q.id))S.notes.push(Q.id);save();SFX.bad();const f=$('fl');f.classList.remove('on');void f.offsetWidth;f.classList.add('on');
+  let n=7;modal(`<h3 style="color:#e33">오답!</h3><p>정답: <b>${Q.options[Q.answer]}</b></p><p>${Q.explanation}</p><button class="o" id="ok" disabled>${n}초 후 다시 풀기</button>`);
+  const iv=setInterval(()=>{n--;if(n>0)$('ok').textContent=n+'초 후 다시 풀기';else{clearInterval(iv);$('ok').disabled=false;$('ok').textContent='다시 풀기';$('ok').onclick=showQuiz}},1000)}}
+const N=()=>S.notes.filter(id=>id>set*25&&id<=set*25+25);
+function notesHTML(){return N().length?N().sort((a,b)=>a-b).map(id=>{const Q=QS[id-1];return `<p><b>Q${id}. ${Q.question}</b><br>✔ ${Q.options[Q.answer]}<br><small>${Q.explanation}</small></p>`}).join(''):'<p>오답 노트가 비었어요! 👏</p>'}
+function result(){mode='end';modal(`<h3>🎉 ${ERA[set]} 25문제 완료!</h3><p>한 번에 맞힌 문제 <b>${score} / 25</b><br>현재 ${maxR} m · 최고 ${S.bst[set]} m · ${S.coins} G</p><h4>📒 오답 노트</h4>${notesHTML()}<button class="o" onclick="replay()">🔁 문제 다시 풀며 기록 이어가기</button><button class="o" onclick="home()">🏠 홈으로 돌아가기</button>`)}
+const shuf=()=>{const a=[...Array(25).keys()];for(let i=24;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+function replay(){q=1;score=0;pass++;ord=shuf();showQuiz()}
+function home(){lanes=[];p={r:0,c:4};maxR=0;cam=0;hp=3;pass=0;q=1;start()}
+function begin(n){bgm();set=n;q=1;score=0;pass=0;maxR=0;cam=0;hp=3;p={r:0,c:4};lanes=[];ord=[...Array(25).keys()];S.notes=S.notes.filter(id=>id<=n*25||id>n*25+25);save();showQuiz()}
+function start(){mode='start';modal(`<h3>🐾 길건너 역사 퀴즈</h3><p>퀴즈를 맞히면 <b>10초</b> 동안 길을 건너요.<br>❤️ 하트 3개! 모두 잃으면 거리 기록이 처음으로 돌아가요(문제는 그대로).<br>🪵 통나무·연잎을 밟아 연못을 건너고 🚗🚚를 피하세요.<br>🟡 코인 10G / 🩷 코인 20G<br>조작: 방향키 / 스와이프(탭=앞으로)</p><button class="o" onclick="begin(0)">🗿 선사시대 25문제<br><small>구석기 · 신석기 · 청동기 · 고조선</small></button><button class="o" onclick="begin(1)">🏯 삼국시대 25문제<br><small>고구려 · 백제 · 신라 · 가야</small></button>`)}
+function notes(){if(mode!='play')return;paused=true;modal('<h3>📒 오답 노트</h3>'+notesHTML()+'<button class="o" onclick="closeM()">닫기</button>')}
+function cyc(){const cs=S.owned.filter(n=>ITEM[n].k=='c');S.eq.c=cs[(cs.indexOf(S.eq.c)+1)%cs.length];save()}
+function shop(m2=''){if(mode!='play')return;paused=true;
+ const on=[S.eq.c,S.eq.h,S.eq.p,S.eq.g];
+ modal(`<h3>🛍️ 꾸미기 상점 (${S.owned.length}/${ALL.length})</h3><p>${S.coins} G ${m2}<br><small>흐린 아이템은 아직 못 얻은 거예요 (뽑기로 랜덤 획득)</small></p><button class="o" onclick="pull()">🎁 100G 뽑기</button><div class="gr">${ALL.map(it=>S.owned.includes(it.n)?`<button class="i${on.includes(it.n)?' on':''}" onclick="eqp('${it.n}')">${it.e}<small>${it.n}</small></button>`:`<button class="i" style="opacity:.35" disabled>${it.e}<small>${it.n}</small></button>`).join('')}</div><button class="o" onclick="closeM()">닫기</button>`)}
+function eqp(n){const k=ITEM[n].k;if(k=='c')S.eq.c=n;else S.eq[k]=S.eq[k]==n?null:n;save();shop()}
+function pull(){if(S.coins<100)return shop('— 코인이 부족해요');
+ const left=ALL.filter(i=>!S.owned.includes(i.n));if(!left.length)return shop('— 모두 모았어요!');
+ const it=left[Math.random()*left.length|0];S.coins-=100;S.owned.push(it.n);SFX.buy();S.eq[it.k]=it.n;save();shop(`— 획득! ${it.e} ${it.n}`)}
+function mv(dr,dc){if(mode!='play'||paused)return;SFX.hop();p.r=Math.max(0,p.r+dr);if(dc)p.c=Math.min(W-1,Math.max(0,Math.round(p.c)+dc));if(lane(p.r).t!='w')p.c=Math.round(p.c)}
+addEventListener('keydown',e=>{const k={ArrowUp:[1,0],w:[1,0],ArrowDown:[-1,0],s:[-1,0],ArrowLeft:[0,-1],a:[0,-1],ArrowRight:[0,1],d:[0,1]}[e.key];if(k){e.preventDefault();mv(...k)}});
+let ts;const cv=$('cv');
+cv.addEventListener('touchstart',e=>{e.preventDefault();ts=e.touches[0]},{passive:false});
+cv.addEventListener('touchend',e=>{e.preventDefault();if(!ts)return;const t=e.changedTouches[0],dx=t.clientX-ts.clientX,dy=t.clientY-ts.clientY;
+ if(Math.max(Math.abs(dx),Math.abs(dy))<25)mv(1,0);else if(Math.abs(dx)>Math.abs(dy))mv(0,dx>0?1:-1);else mv(dy<0?1:-1,0)},{passive:false});
+start();
+requestAnimationFrame(loop);
+</script></body></html>
